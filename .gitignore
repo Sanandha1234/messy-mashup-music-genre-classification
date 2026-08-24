@@ -21,7 +21,7 @@ env/
 *.safetensors
 
 # Local data directories
-data/
+/data/
 datasets/
 
 # Experiment outputs
