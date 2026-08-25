@@ -9,8 +9,8 @@ stems from different songs of the same genre, applying tempo
 adjustments, and adding environmental noise.
 
 The project explores conventional deep learning models as well as
-pretrained audio transformers, including CNN, CRNN, AST, WavLM, and
-HuBERT, with a final transformer ensemble achieving approximately
+pretrained audio transformers, including **CNN, CRNN, AST, WavLM, and
+HuBERT**, with a final transformer ensemble achieving approximately
 **0.88 Macro F1 on the Kaggle leaderboard**.
 
 ---
@@ -42,8 +42,8 @@ The test samples are created by:
 3. Mixing the stems
 4. Adding environmental noise from ESC-50
 
-Therefore, the model needs to learn genre-specific characteristics
-that remain robust to:
+Therefore, the model needs to learn genre-specific characteristics that
+remain robust to:
 
 - Cross-song stem recombination
 - Tempo variations
@@ -67,170 +67,226 @@ The available stems are:
 drums.wav
 vocals.wav
 bass.wav
-others.wav
+other.wav
 ```
-
 ---
 
 ## Dataset Structure
 
-The dataset is organized by genre, with each song containing four
+The dataset is organized by genre. Each song contains four separated
 instrument stems.
 
 ```text
-Dataset
-│
-├── Blues
-│   ├── Song 1
+Dataset/
+├── blues/
+│   ├── song_1/
 │   │   ├── drums.wav
 │   │   ├── vocals.wav
 │   │   ├── bass.wav
-│   │   └── others.wav
-│   ├── Song 2
+│   │   └── other.wav
 │   └── ...
 │
-├── Classical
-├── Country
-├── Disco
-├── Hip-Hop
-├── Jazz
-├── Metal
-├── Pop
-├── Reggae
-└── Rock
+├── classical/
+├── country/
+├── disco/
+├── hiphop/
+├── jazz/
+├── metal/
+├── pop/
+├── reggae/
+└── rock/
 ```
 
 ---
 
+### Data Preparation
+
+````markdown
+---
+
 ## Data Preparation
 
-A major challenge in this competition is the difference between the
-training and test distributions.
+The main challenge is the distribution shift between the original
+training songs and the noisy mashups used for testing.
 
-The training data contains individual songs and instrument stems,
-whereas the test data consists of mashups created by combining stems
-from different songs belonging to the same genre.
+To simulate the competition conditions during training, the pipeline
+supports:
 
-To make the training data more representative of the test conditions,
-the project uses stem mixing and environmental noise augmentation.
+- Mixing stems from different songs of the same genre
+- Audio normalization
+- Tempo adjustment
+- Environmental noise augmentation
+- Random cropping and padding
+- Mel-spectrogram generation
 
-Training samples can therefore contain variation in:
+This makes the training samples more similar to the noisy and
+recombined audio encountered during testing.
 
-- Instrument combinations
-- Instrument balance
-- Cross-song stem combinations
-- Background noise
-- Audio characteristics
-
-Environmental noise is incorporated using the **ESC-50** dataset.
+ESC-50 environmental sounds are used to introduce realistic background
+noise at different signal-to-noise ratios.
 
 ---
 
 ## Audio Preprocessing
 
-Different audio-processing approaches were explored during the
-experiments.
+Audio is loaded using **Librosa** at a target sampling rate of 22,050 Hz.
 
-### Mel-Spectrogram
+The preprocessing pipeline includes:
 
-For the CNN and CRNN experiments, audio was converted into
-Mel-spectrogram representations.
+1. Loading audio
+2. Resampling
+3. Cropping or padding to a fixed duration
+4. Mixing instrument stems
+5. Optional tempo adjustment
+6. Optional ESC-50 noise augmentation
+7. Mel-spectrogram conversion for CNN/CRNN models
 
-These representations provide time-frequency information that can be
-used by convolutional models to learn genre-specific acoustic
-patterns.
-
-### Pretrained Audio Transformers
-
-Pretrained audio transformer models were also explored for the
-classification task.
-
-The transformer models evaluated include:
-
-- AST
-- WavLM
-- HuBERT
+For transformer-based models, audio is also prepared at 16 kHz when
+required by the pretrained model.
 
 ---
 
 ## Model Development
 
-The project followed an iterative modeling approach, starting with
-conventional deep learning architectures and progressing to pretrained
-audio transformers.
+Multiple model architectures were developed and evaluated to understand
+which approaches generalize best to the noisy mashup distribution.
+
+The project follows an incremental modeling approach:
+
+1. CNN baseline
+2. CRNN
+3. AST
+4. WavLM
+5. HuBERT
+6. Transformer ensemble
+
+This progression allowed conventional spectrogram-based models to be
+compared with pretrained audio representation models.
 
 ### CNN
 
-A CNN-based classifier was developed as a baseline for learning
-genre-specific features from Mel-spectrogram representations.
+A convolutional neural network was developed as a baseline model.
+
+The CNN receives Mel-spectrogram representations and learns
+time-frequency patterns associated with different music genres.
 
 ### CRNN
 
-A CRNN architecture was explored to combine convolutional feature
-extraction with temporal modeling.
+A Convolutional Recurrent Neural Network was explored to combine:
+
+- CNN-based feature extraction
+- Temporal sequence modeling
+
+The convolutional layers extract local acoustic features while the
+recurrent component models temporal information.
 
 ### AST
 
-The **Audio Spectrogram Transformer (AST)** was evaluated for
-spectrogram-based audio classification.
+The **Audio Spectrogram Transformer (AST)** was used as a pretrained
+transformer architecture for audio classification.
+
+AST operates on spectrogram representations and provides a strong
+alternative to conventional CNN-based approaches.
 
 ### WavLM
 
-**WavLM** was evaluated as a pretrained audio representation model for
-the genre classification task.
+**WavLM** was evaluated as a pretrained speech/audio representation
+model and fine-tuned for the 10-class music genre classification task.
 
 ### HuBERT
 
 **HuBERT** was also evaluated as a pretrained audio representation
-model for genre classification.
+model and adapted for genre classification.
 
 ---
 
-## Final Ensemble
+## Transformer Ensemble
 
-The final approach combined predictions from three pretrained audio
-models:
+The final approach combines predictions from three pretrained
+transformer models:
 
 - AST
 - WavLM
 - HuBERT
 
-The ensemble used the following weights:
+The predictions are combined using a weighted ensemble.
 
-| Model | Weight |
+| Model | Ensemble Weight |
 |---|---:|
 | AST | 50% |
 | WavLM | 20% |
 | HuBERT | 30% |
 
-The weighted predictions from the three models were combined to
-produce the final genre classification.
+The weighted predictions are combined to produce the final genre
+prediction.
+
+The ensemble was designed to combine complementary representations
+learned by the different pretrained audio models.
 
 ---
 
 ## Results
 
-The competition uses **Macro F1 Score** as the evaluation metric.
+The primary evaluation metric for the competition is **Macro F1
+Score**.
 
-Macro F1 calculates the F1 score independently for each of the 10
-genre classes and then averages the scores, giving each genre equal
-importance.
+Macro F1 calculates the F1 score independently for each genre and
+then averages the scores, giving equal importance to every genre.
 
 ### Model Performance
 
-| Model | Validation F1 |
-|---|---:|
-| AST | ~0.977 |
-| WavLM | ~0.918 |
-| HuBERT | ~0.890 |
-| Final Ensemble | ~0.879 |
+| Model | Validation F1 | Test / Leaderboard Score |
+|---|---:|---:|
+| CNN | ~0.35 | ~0.32 |
+| CRNN | ~0.60 | ~0.55 |
+| Improved CRNN | ~0.70 | ~0.65 |
+| HuBERT | ~0.890 | ~0.72 |
+| AST | ~0.977 | ~0.815 |
+| WavLM | ~0.918 | ~0.85 |
+| AST + WavLM Ensemble | ~0.95 | ~0.861 |
+| AST + WavLM + HuBERT Ensemble | ~0.96 | ~0.879 |
 
-### Kaggle Leaderboard
+The final transformer ensemble achieved approximately **0.88 Macro F1**
+on the Kaggle leaderboard.
 
-**Macro F1: 0.88**
+---
 
-The final Kaggle submission used the weighted ensemble of AST, WavLM
-and HuBERT.
+## Repository Structure
+
+```text
+messy-mashup-music-genre-classification/
+│
+├── README.md
+├── requirements.txt
+├── .gitignore
+│
+├── notebooks/
+│   ├── messy_mashup_classification.ipynb
+│   ├── milestone-1.ipynb
+│   ├── milestone-2.ipynb
+│   ├── milestone-3.ipynb
+│   ├── milestone-4.ipynb
+│   └── milestone-5.ipynb
+│
+└── src/
+    │
+    ├── data/
+    │   ├── audio_processing.py
+    │   └── dataset.py
+    │
+    ├── models/
+    │   ├── cnn.py
+    │   ├── crnn.py
+    │   ├── transformers.py
+    │   └── ensemble.py
+    │
+    ├── training/
+    │   ├── train.py
+    │   └── train_utils.py
+    │
+    └── inference/
+        └── predict.py
+```
 
 ---
 
@@ -246,8 +302,9 @@ and HuBERT.
 ### Audio Processing
 
 - Librosa
+- Torchaudio
 - Mel-spectrograms
-- ESC-50
+- ESC-50 environmental noise dataset
 
 ### Deep Learning
 
@@ -257,46 +314,176 @@ and HuBERT.
 - AST
 - WavLM
 - HuBERT
-- Ensemble Learning
+- Transformer Ensemble
 
 ### Experimentation
 
 - Kaggle
 - Weights & Biases
+- Hugging Face Transformers
 
 ---
 
-## Repository Structure
+## Project Workflow
+
+The overall pipeline follows these stages:
 
 ```text
-messy-mashup-music-genre-classification/
-│
-├── messy_mashup_classification.ipynb
-├── README.md
-└── ...
+Raw Audio
+    │
+    ▼
+Audio Loading
+    │
+    ▼
+Stem Selection / Mixing
+    │
+    ▼
+Tempo Adjustment
+    │
+    ▼
+Noise Augmentation
+    │
+    ▼
+Audio Preprocessing
+    │
+    ├───────────────┐
+    ▼               ▼
+Mel-Spectrogram   Raw Audio
+    │               │
+    ▼               ▼
+ CNN / CRNN     AST / WavLM / HuBERT
+    │               │
+    └───────┬───────┘
+            ▼
+       Model Ensemble
+            │
+            ▼
+      Genre Prediction
+            │
+            ▼
+       Submission.csv
 ```
 
 ---
 
-## Key Learnings
+## Running the Project
 
-This project provided practical experience with:
+The project can be developed and executed using the modular source
+code under `src/`.
 
-- Audio classification
-- Audio preprocessing
-- Mel-spectrograms
-- Audio augmentation
-- Noise robustness
-- CNN and CRNN architectures
-- Transfer learning
-- Pretrained audio transformers
-- Model ensembling
-- Distribution shift
-- Macro F1 evaluation
-- Kaggle experimentation
+### Training
 
-A major challenge was designing a model that could generalize from
-clean training audio to noisy, recombined test mashups.
+The training pipeline is located at:
+
+```text
+src/training/train.py
+```
+
+### Inference
+
+The inference pipeline is located at:
+
+```text
+src/inference/predict.py
+```
+
+---
+
+## Hugging Face Deployment
+
+The trained music genre classification system has also been deployed
+as an interactive application on Hugging Face Spaces.
+
+Users can upload an audio file and obtain a predicted music genre
+through the deployed interface.
+
+### Live Demo
+
+**Hugging Face Space:**
+
+https://huggingface.co/spaces/psanandha/music-genre-classifier
+
+The deployed application provides an accessible interface for testing
+the trained audio classification model without requiring the complete
+training environment locally.
+
+---
+
+## Inference Workflow
+
+The inference process follows these steps:
+
+```text
+Audio File
+    │
+    ▼
+Audio Loading
+    │
+    ▼
+Audio Preprocessing
+    │
+    ▼
+Feature Extraction
+    │
+    ▼
+Trained Model
+    │
+    ▼
+Genre Prediction
+    │
+    ▼
+Predicted Genre
+```
+
+---
+
+## Supported Genres
+
+The classifier predicts one of the following 10 music genres:
+
+```text
+Blues
+Classical
+Country
+Disco
+Hip-Hop
+Jazz
+Metal
+Pop
+Reggae
+Rock
+```
+
+---
+
+## Example Prediction
+
+The deployed application accepts an audio file and processes it through
+the trained classification pipeline.
+
+Example:
+
+```text
+Input:
+music_sample.wav
+
+Output:
+Predicted Genre: Rock
+```
+
+---
+
+## Limitations
+
+The current system has the following limitations:
+
+- Performance may vary for audio outside the competition distribution.
+- Very noisy audio may reduce classification accuracy.
+- Unusual instrument combinations may affect predictions.
+- Transformer-based models require more computational resources than
+  conventional CNN models.
+- The final leaderboard score depends on the specific competition test
+  distribution.
 
 ---
 
@@ -312,3 +499,63 @@ Potential improvements include:
 - Probability calibration
 - More advanced ensemble strategies
 - Further fine-tuning of pretrained audio models
+- Faster inference optimization
+- Improved deployment efficiency
+
+---
+
+## Key Learnings
+
+This project provided practical experience with:
+
+- Music genre classification
+- Audio preprocessing
+- Mel-spectrogram generation
+- Audio augmentation
+- Environmental noise robustness
+- CNN and CRNN architectures
+- Transfer learning
+- Pretrained audio transformers
+- Model ensembling
+- Distribution shift
+- Macro F1 evaluation
+- Kaggle experimentation
+- Hugging Face deployment
+
+A major challenge was designing a model that can generalize from
+individual training songs to noisy and recombined music mashups.
+
+---
+
+## Conclusion
+
+The Messy Mashup project demonstrates the application of deep learning,
+pretrained audio transformers, and ensemble learning to robust music
+genre classification.
+
+The project progressed from CNN and CRNN baseline models to pretrained
+AST, WavLM, and HuBERT models.
+
+The final AST + WavLM + HuBERT ensemble achieved approximately
+**0.88 Macro F1 on the Kaggle leaderboard**.
+
+The project also includes an interactive Hugging Face deployment where
+users can upload an audio file and obtain a predicted music genre.
+
+### Live Demo
+
+https://huggingface.co/spaces/psanandha/music-genre-classifier
+
+---
+
+## Author
+
+Developed as part of the **Messy Mashup music genre classification
+project**.
+
+---
+
+## License
+
+This project is provided for educational and research purposes.
+
