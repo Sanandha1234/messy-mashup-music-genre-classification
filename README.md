@@ -3,6 +3,11 @@
 A deep learning project for robust music genre classification under
 noisy, mixed, and distribution-shifted audio conditions.
 
+**Project Links**
+- **GitHub:** [Source code and project files](https://github.com/Sanandha1234/messy-mashup-music-genre-classification)
+- **Kaggle Notebook:** [View notebook](https://www.kaggle.com/code/psanandha/dl-24f2008134-notebook-t12026) *(private; access may be restricted)*
+- **Hugging Face Demo:** [Try the deployed application](https://huggingface.co/spaces/psanandha/music-genre-classifier)
+
 This project was developed for the **Messy Mashup** competition, where
 the test data consists of music mashups created by combining instrument
 stems from different songs of the same genre, applying tempo
